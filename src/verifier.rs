@@ -1,11 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use super::{PreparedVerifyingKey, Proof, VerificationError, VerifyingKey};
-// use group::{prime::PrimeCurveAffine, Curve};
-// use pairing::{MillerLoopResult, MultiMillerLoop};
-// use cosmwasm_std::Uint128;
-
-// use sp_std::ops::{AddAssign};
 
 pub fn prepare_verifying_key(vk: &VerifyingKey) -> PreparedVerifyingKey {
     let alpha_g1_beta_g1 = vk.alpha_g1.checked_mul(vk.beta_g1).unwrap();

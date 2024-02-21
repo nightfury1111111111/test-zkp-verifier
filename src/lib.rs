@@ -1,15 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// use pairing::{Engine, MultiMillerLoop};
-use cosmwasm_std::Uint128;
-// use codec::{Decode, Encode};
+use cosmwasm_std::Uint128; // used to manage private and public inputs - all inputs are prime numbers
 use sp_std::prelude::*;
-// use sp_std::sync::Arc;
 
 mod verifier;
 
 pub use self::verifier::*;
 
+// Proof info - defined as alpha * beta * gamma
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Clone, Default, Eq)]
 pub struct Proof {
@@ -22,15 +20,11 @@ impl PartialEq for Proof {
     }
 }
 
+// Verify keys - composited to three different prime numbers
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Clone)]
 pub struct VerifyingKey {
-    // alpha in g1 for verifying and for creating A/C elements of
-    // proof. Never the point at infinity.
     pub alpha_g1: Uint128,
-
-    // beta in g1 and g2 for verifying and for creating B/C elements
-    // of proof. Never the point at infinity.
     pub beta_g1: Uint128,
     pub gamma_g1: Uint128,
 }
@@ -51,8 +45,6 @@ pub struct PreparedVerifyingKey {
     gamma_g1: Uint128,
 }
 
-/// This is an error that could occur during circuit synthesis contexts,
-/// such as CRS generation or proving.
 #[derive(Debug)]
 pub enum SynthesisError {
     /// During synthesis, we lacked knowledge of a variable assignment.
