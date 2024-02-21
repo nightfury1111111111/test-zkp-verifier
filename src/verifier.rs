@@ -1,57 +1,50 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use group::{prime::PrimeCurveAffine, Curve};
-use pairing::{MillerLoopResult, MultiMillerLoop};
-use super::{PreparedVerifyingKey, Proof, VerifyingKey, VerificationError};
+use super::{PreparedVerifyingKey, Proof, VerificationError, VerifyingKey};
+// use group::{prime::PrimeCurveAffine, Curve};
+// use pairing::{MillerLoopResult, MultiMillerLoop};
+// use cosmwasm_std::Uint128;
 
-use sp_std::ops::{AddAssign, Neg};
+// use sp_std::ops::{AddAssign};
 
-pub fn prepare_verifying_key<E: MultiMillerLoop>(vk: &VerifyingKey<E>) -> PreparedVerifyingKey<E> {
-
-    let gamma = vk.gamma_g2.neg();
-    let delta = vk.delta_g2.neg();
-
+pub fn prepare_verifying_key(vk: &VerifyingKey) -> PreparedVerifyingKey {
+    let alpha_g1_beta_g1 = vk.alpha_g1.checked_mul(vk.beta_g1).unwrap();
     PreparedVerifyingKey {
-        alpha_g1_beta_g2: E::pairing(&vk.alpha_g1, &vk.beta_g2),
-        neg_gamma_g2: gamma.into(),
-        neg_delta_g2: delta.into(),
-        ic: vk.ic.clone(),
+        alpha_g1_beta_g1: alpha_g1_beta_g1,
+        gamma_g1: vk.gamma_g1,
     }
 }
 
-pub fn verify_proof<'a, E: MultiMillerLoop>(
-    pvk: &'a PreparedVerifyingKey<E>,
-    proof: &Proof<E>,
-    public_inputs: &[E::Fr],
-) -> Result<(), VerificationError> {
-    if (public_inputs.len() + 1) != pvk.ic.len() {
-        return Err(VerificationError::InvalidVerifyingKey);
-    }
-
-    let mut acc = pvk.ic[0].to_curve();
-
-    for (i, b) in public_inputs.iter().zip(pvk.ic.iter().skip(1)) {
-        AddAssign::<&E::G1>::add_assign(&mut acc, &(*b * i));
-    }
-
+pub fn verify_proof(pvk: &PreparedVerifyingKey, proof: &Proof) -> Result<(), VerificationError> {
     // The original verification equation is:
-    // A * B = alpha * beta + inputs * gamma + C * delta
-    // ... however, we rearrange it so that it is:
-    // A * B - inputs * gamma - C * delta = alpha * beta
-    // or equivalently:
-    // A * B + inputs * (-gamma) + C * (-delta) = alpha * beta
-    // which allows us to do a single final exponentiation.
+    // a = alpha * beta * gamma
 
-    if pvk.alpha_g1_beta_g2
-        == E::multi_miller_loop(&[
-            (&proof.a, &proof.b.into()),
-            (&acc.to_affine(), &pvk.neg_gamma_g2),
-            (&proof.c, &pvk.neg_delta_g2),
-        ])
-        .final_exponentiation()
-    {
+    if pvk.alpha_g1_beta_g1.checked_mul(pvk.gamma_g1).unwrap() == proof.a {
         Ok(())
     } else {
         Err(VerificationError::InvalidProof)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use cosmwasm_std::Uint128;
+
+    #[test]
+    fn verify_proof_test() {
+        let vk = VerifyingKey {
+            alpha_g1: Uint128::new(7),
+            beta_g1: Uint128::new(11),
+            gamma_g1: Uint128::new(2),
+        };
+        let pvk = prepare_verifying_key(&vk);
+        let proof = Proof {
+            a: Uint128::new(154),
+        };
+        match verify_proof(&pvk, &proof) {
+            Ok(()) => {}
+            Err(e) => panic!("Unexpected error: {:?}", e),
+        };
     }
 }

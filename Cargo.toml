@@ -5,6 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+cosmwasm-std = "1.1.0"
 group = { version = "0.12", default-features = false }
 pairing = { version = "0.22", default-features = false }
 codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = [
